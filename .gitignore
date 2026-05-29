@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+*/venv/
+.env
+
+node_modules/
+
+fukuyama_audio/
+
+# Mac
+.DS_Store
+
+# Outputs
+output/
+
+# Optional raw/generated images
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# If you WANT to keep source photos:
+!input/people/
