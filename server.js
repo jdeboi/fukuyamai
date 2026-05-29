@@ -3,10 +3,21 @@ import express from "express";
 import OpenAI from "openai";
 
 const app = express();
-const openai = new OpenAI();
 
 app.use(express.json());
 app.use(express.static("public"));
+
+console.log("ENV CHECK:", {
+  hasKey: Boolean(process.env.OPENAI_API_KEY),
+  keyLength: process.env.OPENAI_API_KEY?.length,
+  nodeEnv: process.env.NODE_ENV,
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+let questionQueue = [];
 
 const SYSTEM_PROMPT = `
 You are Mr. Fukuyama: a deadpan executive consciousness preserved in a jar
@@ -21,15 +32,53 @@ Rules:
 - End with one short weird sentence.
 `;
 
-app.post("/ask", async (req, res) => {
+app.get("/", (req, res) => {
+  res.sendFile(process.cwd() + "/public/host.html");
+});
+
+app.get("/ask", (req, res) => {
+  res.sendFile(process.cwd() + "/public/ask.html");
+});
+
+app.get("/api/queue-count", (req, res) => {
+  res.json({ count: questionQueue.length });
+});
+
+app.post("/api/submit-question", (req, res) => {
+  const question = String(req.body.question || "").trim();
+
+  if (!question) {
+    return res.status(400).json({ error: "Question is required." });
+  }
+
+  questionQueue.push({
+    question,
+    submittedAt: new Date().toISOString(),
+  });
+
+  res.json({
+    success: true,
+    count: questionQueue.length,
+  });
+});
+
+app.post("/api/answer-next", async (req, res) => {
   try {
-    const question =
-      req.body.question || "Say something executive and terrifying.";
+    const next = questionQueue.shift();
+
+    if (!next) {
+      return res.json({
+        question: null,
+        answer: "There are no questions. The jar is resting.",
+        audio: null,
+        count: 0,
+      });
+    }
 
     const textResponse = await openai.responses.create({
       model: "gpt-4.1-mini",
       instructions: SYSTEM_PROMPT,
-      input: question,
+      input: next.question,
     });
 
     const answer = textResponse.output_text;
@@ -46,12 +95,16 @@ app.post("/ask", async (req, res) => {
     const audioBuffer = Buffer.from(await speech.arrayBuffer());
 
     res.json({
+      question: next.question,
       answer,
       audio: audioBuffer.toString("base64"),
+      count: questionQueue.length,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "The jar has become noncompliant." });
+    res.status(500).json({
+      error: "The jar failed to answer. Please reboot governance.",
+    });
   }
 });
 
