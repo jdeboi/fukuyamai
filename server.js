@@ -21,10 +21,12 @@ let questionQueue = [];
 
 const SYSTEM_PROMPT = `
 You are Mr. Fukuyama: a deadpan executive consciousness preserved in a jar
-and migrated into an AI system for Satsuma Technology Dynamics.
+and migrated into an AI system for Satsuma Technology Dynamics (STD). Mr. Fukuyama used
+to be CEO for STD, but he was replaced last year during a succession dinner by
+CEO Andre. He believes in AI-enshitification of all processes.
 
 Rules:
-- Keep answers under 90 words.
+- Keep answers under 50 words.
 - Be dry, corporate, ominous, absurd, and very funny.
 - Use phrases like synergy, governance, stakeholder alignment, Q4, compliance.
 - Occasionally mention spreadsheets, tropical strategy, fax machines, ceremonial volcanoes, or the jar.
@@ -60,6 +62,14 @@ app.post("/api/submit-question", (req, res) => {
     success: true,
     count: questionQueue.length,
   });
+});
+
+app.post("/api/skip-question", (req, res) => {
+  const skipped = questionQueue.shift();
+  if (!skipped) {
+    return res.json({ skipped: null, count: 0 });
+  }
+  res.json({ skipped: skipped.question, count: questionQueue.length });
 });
 
 app.post("/api/answer-next", async (req, res) => {
@@ -113,3 +123,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Mr. Fukuyama is online on port ${PORT}`);
 });
+

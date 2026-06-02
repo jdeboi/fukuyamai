@@ -1,13 +1,22 @@
 <!doctype html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mr. Fukuyama Host Console</title>
     <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
       body {
         background: #050805;
         color: #9cff9c;
         font-family: "Courier New", monospace;
-        padding: 40px;
+        padding: clamp(16px, 5vw, 40px);
+        max-width: 800px;
+        margin: auto;
       }
 
       h1 {
@@ -19,18 +28,27 @@
         color: #050805;
         border: none;
         padding: 16px 24px;
-        font-size: 20px;
+        font-size: clamp(16px, 4vw, 20px);
         font-weight: bold;
         cursor: pointer;
         margin-top: 20px;
+        width: 100%;
+        max-width: 340px;
+      }
+
+      #skip-btn {
+        background: transparent;
+        color: #9cff9c;
+        border: 1px solid #9cff9c;
       }
 
       .box {
         border: 1px solid #9cff9c;
-        padding: 20px;
+        padding: 16px;
         margin-top: 24px;
-        font-size: 22px;
+        font-size: clamp(16px, 4vw, 22px);
         white-space: pre-wrap;
+        word-break: break-word;
       }
 
       #count {
@@ -46,6 +64,7 @@
     <div id="count">0</div>
 
     <button onclick="answerNext()">ANSWER NEXT QUESTION</button>
+    <button id="skip-btn" onclick="skipQuestion()">SKIP ON DECK</button>
 
     <div class="box">
       <strong>Question:</strong>
@@ -90,6 +109,21 @@
         if (data.audio) {
           const audio = new Audio("data:audio/mp3;base64," + data.audio);
           audio.play();
+        }
+      }
+
+      async function skipQuestion() {
+        const res = await fetch("/api/skip-question", { method: "POST" });
+        const data = await res.json();
+        document.getElementById("count").textContent = data.count;
+        if (data.skipped) {
+          document.getElementById("question").textContent =
+            `[SKIPPED] ${data.skipped}`;
+          document.getElementById("answer").textContent =
+            "Question dismissed. The jar remains unmoved.";
+        } else {
+          document.getElementById("question").textContent =
+            "No questions in queue.";
         }
       }
 

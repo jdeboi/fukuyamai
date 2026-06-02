@@ -1,13 +1,20 @@
 <!doctype html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ask Mr. Fukuyama</title>
     <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
       body {
         background: #050805;
         color: #9cff9c;
         font-family: "Courier New", monospace;
-        padding: 40px;
+        padding: clamp(16px, 5vw, 40px);
         max-width: 700px;
         margin: auto;
       }
