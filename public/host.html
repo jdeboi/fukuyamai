@@ -34,6 +34,7 @@
         margin-top: 20px;
         width: 100%;
         max-width: 340px;
+        display: block;
       }
 
       #skip-btn {
@@ -43,12 +44,29 @@
       }
 
       .box {
-        border: 1px solid #9cff9c;
         padding: 16px;
         margin-top: 24px;
         font-size: clamp(16px, 4vw, 22px);
         white-space: pre-wrap;
         word-break: break-word;
+      }
+
+      #question-box {
+        border: 1px solid #9cfff9;
+        color: #9cfff9;
+      }
+
+      #question-box strong {
+        color: #9cfff9;
+      }
+
+      #answer-box {
+        border: 1px solid #9cff9c;
+        color: #9cff9c;
+      }
+
+      #answer-box strong {
+        color: #9cff9c;
       }
 
       #count {
@@ -63,39 +81,47 @@
     <p>Queued questions:</p>
     <div id="count">0</div>
 
-    <button onclick="answerNext()">ANSWER NEXT QUESTION</button>
-    <button id="skip-btn" onclick="skipQuestion()">SKIP ON DECK</button>
+    <button onclick="answerNext()">ANSWER</button>
+    <button id="skip-btn" onclick="skipQuestion()">SKIP</button>
 
-    <div class="box">
-      <strong>Question:</strong>
+    <div class="box" id="question-box">
+      <strong>On Deck:</strong>
       <div id="question">Awaiting queue activity...</div>
     </div>
 
-    <div class="box">
+    <div class="box" id="answer-box">
       <strong>Answer:</strong>
       <div id="answer">The jar is moist and ready.</div>
     </div>
 
     <script>
+      let isProcessing = false;
+
+      function setOnDeck(next) {
+        document.getElementById("question").textContent =
+          next || "Queue is empty.";
+      }
+
       async function updateCount() {
         const res = await fetch("/api/queue-count");
         const data = await res.json();
         document.getElementById("count").textContent = data.count;
+        if (!isProcessing) {
+          setOnDeck(data.next);
+        }
       }
 
       async function answerNext() {
-        const questionBox = document.getElementById("question");
+        if (isProcessing) return;
+        isProcessing = true;
+
         const answerBox = document.getElementById("answer");
+        answerBox.textContent = "PROCESSING... RECALIBRATING EXECUTIVE FLUIDS...";
 
-        questionBox.textContent = "Retrieving next question...";
-        answerBox.textContent =
-          "PROCESSING... RECALIBRATING EXECUTIVE FLUIDS...";
-
-        const res = await fetch("/api/answer-next", {
-          method: "POST",
-        });
-
+        const res = await fetch("/api/answer-next", { method: "POST" });
         const data = await res.json();
+
+        isProcessing = false;
 
         if (data.error) {
           answerBox.textContent = data.error;
@@ -103,8 +129,8 @@
         }
 
         document.getElementById("count").textContent = data.count;
-        questionBox.textContent = data.question || "No question.";
         answerBox.textContent = data.answer;
+        setOnDeck(data.next);
 
         if (data.audio) {
           const audio = new Audio("data:audio/mp3;base64," + data.audio);
@@ -116,15 +142,7 @@
         const res = await fetch("/api/skip-question", { method: "POST" });
         const data = await res.json();
         document.getElementById("count").textContent = data.count;
-        if (data.skipped) {
-          document.getElementById("question").textContent =
-            `[SKIPPED] ${data.skipped}`;
-          document.getElementById("answer").textContent =
-            "Question dismissed. The jar remains unmoved.";
-        } else {
-          document.getElementById("question").textContent =
-            "No questions in queue.";
-        }
+        setOnDeck(data.next);
       }
 
       updateCount();
