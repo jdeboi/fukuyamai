@@ -1,0 +1,278 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mr. Fukuyama — Breakout Evaluation</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #050805;
+        color: #9cff9c;
+        font-family: "Courier New", monospace;
+        padding: clamp(20px, 4vw, 48px);
+        max-width: 1100px;
+        margin: auto;
+      }
+
+      h1 {
+        text-transform: uppercase;
+        font-size: clamp(22px, 3vw, 36px);
+        margin: 0 0 8px;
+      }
+
+      p {
+        color: #9cff9c;
+        font-size: 16px;
+        opacity: 0.7;
+        margin: 2px 0 20px;
+      }
+
+      /* ── Setup phase ── */
+
+      .session-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 12px;
+      }
+
+      .session-label {
+        font-size: 14px;
+        color: #4a8a4a;
+        white-space: nowrap;
+        flex-shrink: 0;
+        width: 28px;
+      }
+
+      .session-title {
+        font-size: 15px;
+        font-weight: bold;
+        flex: 0 0 340px;
+        line-height: 1.3;
+      }
+
+      .session-row input {
+        flex: 1;
+        background: #111;
+        color: #9cff9c;
+        border: 1px solid #9cff9c;
+        font-family: inherit;
+        font-size: 15px;
+        padding: 10px 14px;
+        min-width: 0;
+      }
+
+      .session-row input::placeholder {
+        color: #4a8a4a;
+      }
+
+      #rate-btn {
+        margin-top: 28px;
+        background: #9cff9c;
+        color: #050805;
+        border: none;
+        padding: 18px 48px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      #rate-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      /* ── Results phase ── */
+
+      #results {
+        display: none;
+      }
+
+      .result-row {
+        border: 1px solid #2a2a2a;
+        padding: 14px 18px;
+        margin-top: 12px;
+      }
+
+      .result-title {
+        font-size: 14px;
+        font-weight: bold;
+        color: #4a8a4a;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+
+      .result-rating {
+        font-size: 18px;
+        color: #ffe94c;
+      }
+
+      #reveal-btn {
+        background: #ff9cfc;
+        color: #050805;
+        border: none;
+        padding: 18px 48px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      #winner-section {
+        margin-top: 36px;
+        border: 1px solid #ff9cfc;
+        padding: 24px;
+      }
+
+      #winner-label {
+        font-size: 13px;
+        color: #ff9cfc;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 10px;
+      }
+
+      #winner-text {
+        font-size: 22px;
+        color: #ff9cfc;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Setup phase -->
+    <div id="setup">
+      <h1>Breakout Evaluation</h1>
+      <p>Paste the Google Slides link for each team that presented, then click Rate.</p>
+
+      <div id="session-list"></div>
+
+      <button id="rate-btn" onclick="runEvaluation()" disabled>RATE</button>
+    </div>
+
+    <!-- Results phase -->
+    <div id="results">
+      <h1>Results</h1>
+      <div id="result-list"></div>
+      <button id="reveal-btn" onclick="revealWinner()" style="margin-top: 28px">REVEAL WINNER</button>
+      <div id="winner-section" style="display:none">
+        <div id="winner-label">Winner</div>
+        <div id="winner-text"></div>
+      </div>
+    </div>
+
+    <script>
+      const SESSIONS = [
+        {
+          number: 1,
+          title: "CREATE A VISION FOR A $1 TRILLION BALLROOM",
+          ask: "The board has approved a $1,000,000,000,000 ballroom — no ROI required, no questions asked. What monumentally wasteful centerpiece will define STD's legacy for generations? Think pyramids, but louder. Sell us the vision. Must include: the ballroom's name, at least 3 obscenely expensive features, and visuals.",
+        },
+        {
+          number: 2,
+          title: "STD CRYPTO LAUNCH",
+          ask: "STD has decided to enter the cryptocurrency market despite having no experience, expertise, or legitimate use case. Launch a cryptocurrency useful in one of STD's International Extortion campaigns. Must include: the coin's name, what problem it claims to solve, one celebrity endorsement, and at least 1 visual example of NFTs, premium tokens, or digital assets.",
+        },
+        {
+          number: 3,
+          title: "SIGNAL-GATE REBRAND",
+          ask: "Your PR firm has been retained by STD following what leadership insists was 'an exceptionally strong quarter.' Several STD scandals are expected to become public on Monday. Due to budget constraints, you may only address one. Must include: what controversy you're tackling, a press-release headline, a hashtag to seize the narrative, and a visual (meme/campaign asset) to spread on social media.",
+        },
+        {
+          number: 4,
+          title: "AI-ENSHITIFICATION STANK SO GOOD",
+          ask: "STD's next venture must truly embody our core principle: shove AI into a product, process, or moment of human life that was working perfectly fine without it. Make it worse. Charge a subscription. Pitch it like you believe. Must include: product name (bonus: lowercase, vowel-light), the thing it ruins and how, and a visual (logo, mockup, UI screen, ad).",
+        },
+        {
+          number: 5,
+          title: "PITCH A NEW CORPORATE HOLIDAY",
+          ask: "STD is launching a brand-new company holiday — annual, paid, fully ours. Your team owns the concept: what is it called, what does it celebrate, and why does it belong on every employee's calendar? Must include: a name and date, what it commemorates, how STD celebrates it (rituals, food, dress code), and a festive image or poster.",
+        },
+        {
+          number: 6,
+          title: "PITCH A NEW CORPORATE MASCOT + SWAG",
+          ask: "STD needs a face. Design a brand-new corporate mascot and the single piece of swag that goes on every new hire's desk on day one. Must include: the mascot's name and story, a visual, the one swag item and why, and a catchphrase or tagline.",
+        },
+      ];
+
+      const urls = SESSIONS.map(() => "");
+
+      function buildForm() {
+        const list = document.getElementById("session-list");
+        SESSIONS.forEach((s, i) => {
+          const row = document.createElement("div");
+          row.className = "session-row";
+          row.innerHTML = `
+            <span class="session-label">#${s.number}</span>
+            <span class="session-title">${s.title}</span>
+            <input type="text" placeholder="Paste Google Slides URL"
+              oninput="urls[${i}] = this.value; checkReady()" />
+          `;
+          list.appendChild(row);
+        });
+      }
+
+      function checkReady() {
+        const any = urls.some((u) => u.trim().includes("docs.google.com/presentation"));
+        document.getElementById("rate-btn").disabled = !any;
+      }
+
+      async function runEvaluation() {
+        const btn = document.getElementById("rate-btn");
+        btn.textContent = "EVALUATING...";
+        btn.disabled = true;
+
+        const sessions = SESSIONS
+          .map((s, i) => ({ title: s.title, ask: s.ask, url: urls[i].trim() }))
+          .filter((s) => s.url.includes("docs.google.com/presentation"));
+
+        const res = await fetch("/api/evaluate-breakouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessions }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          btn.textContent = "RATE";
+          btn.disabled = false;
+          alert(data.error);
+          return;
+        }
+
+        // Switch to results view
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("results").style.display = "block";
+
+        const resultList = document.getElementById("result-list");
+        data.ratings.forEach((r) => {
+          const row = document.createElement("div");
+          row.className = "result-row";
+          row.innerHTML = `
+            <div class="result-title">${r.title}</div>
+            <div class="result-rating">${r.rating}</div>
+          `;
+          resultList.appendChild(row);
+        });
+
+        document.getElementById("winner-text").textContent = data.winner;
+        winnerAudio = data.audio || null;
+      }
+
+      let winnerAudio = null;
+
+      function revealWinner() {
+        document.getElementById("reveal-btn").style.display = "none";
+        document.getElementById("winner-section").style.display = "block";
+        if (winnerAudio) new Audio("data:audio/mp3;base64," + winnerAudio).play();
+      }
+
+      buildForm();
+    </script>
+  </body>
+</html>

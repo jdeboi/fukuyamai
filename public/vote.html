@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vote</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #050805;
+        color: #9cff9c;
+        font-family: "Courier New", monospace;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      canvas {
+        position: fixed;
+        top: 0; left: 0;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      #ui {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        padding-bottom: clamp(48px, 10vh, 80px);
+        z-index: 2;
+      }
+
+      #act-name {
+        position: fixed;
+        top: clamp(20px, 5vh, 40px);
+        left: 0; right: 0;
+        text-align: center;
+        font-size: clamp(14px, 4vw, 22px);
+        text-transform: uppercase;
+        opacity: 0.7;
+        padding: 0 20px;
+      }
+
+      #status {
+        position: fixed;
+        top: clamp(52px, 10vh, 74px);
+        left: 0; right: 0;
+        text-align: center;
+        font-size: 13px;
+        color: #4a8a4a;
+      }
+
+      #heart-btn {
+        font-size: clamp(64px, 18vw, 96px);
+        background: none;
+        border: none;
+        cursor: pointer;
+        line-height: 1;
+        transition: transform 0.08s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #heart-btn:active { transform: scale(0.88); }
+      #heart-btn.inactive { opacity: 0.2; cursor: default; }
+
+      #score {
+        margin-top: 16px;
+        font-size: clamp(28px, 8vw, 48px);
+        font-weight: bold;
+        min-height: 56px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <div id="act-name">Waiting for act to start...</div>
+    <div id="status"></div>
+
+    <div id="ui">
+      <button id="heart-btn" class="inactive" onclick="sendLike()">❤️</button>
+      <div id="score"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <script>
+      const socket = io();
+      let scoring = false;
+      let myScore = 0;
+
+      const ACTS = {
+        1: "Flaming-o Laser Show",
+        2: "Resolving Workplace Conflict with Mixed Martial Arts",
+        3: "Chairholder Cha Cha",
+        4: "Strategic Asset Reallocation",
+        5: "This Shit Is Bananas",
+        6: "DJ Dry Phonics",
+      };
+
+      socket.on("talent-state", (state) => {
+        scoring = state.scoring;
+        const btn = document.getElementById("heart-btn");
+        btn.classList.toggle("inactive", !scoring);
+
+        const actName = document.getElementById("act-name");
+        const status = document.getElementById("status");
+
+        if (state.currentAct && ACTS[state.currentAct]) {
+          actName.textContent = ACTS[state.currentAct];
+          status.textContent = scoring ? "— voting open —" : "— voting closed —";
+        } else {
+          actName.textContent = "Waiting for act to start...";
+          status.textContent = "";
+        }
+
+        if (!scoring) {
+          myScore = 0;
+          document.getElementById("score").textContent = "";
+        }
+      });
+
+      // When anyone clicks, show a heart on this screen
+      socket.on("heart", () => {
+        spawnHeart();
+      });
+
+      function sendLike() {
+        if (!scoring) return;
+        myScore++;
+        document.getElementById("score").textContent = myScore;
+        socket.emit("like");
+      }
+
+      // ── p5.js floating hearts ──────────────────────────
+
+      const hearts = [];
+
+      new p5((p) => {
+        const canvas = document.getElementById("canvas");
+
+        p.setup = () => {
+          const c = p.createCanvas(window.innerWidth, window.innerHeight);
+          c.parent(document.body);
+          // Move p5 canvas to our existing canvas element position
+          document.body.removeChild(c.elt);
+          document.body.insertBefore(c.elt, document.body.firstChild);
+          c.elt.id = "p5canvas";
+          p.textSize(36);
+          p.textAlign(p.CENTER, p.CENTER);
+        };
+
+        p.draw = () => {
+          p.clear();
+          for (let i = hearts.length - 1; i >= 0; i--) {
+            const h = hearts[i];
+            h.y -= h.speed;
+            h.x += Math.sin(h.t) * 1.2;
+            h.t += 0.07;
+            h.alpha -= 2.5;
+            p.fill(255, 80, 130, h.alpha);
+            p.noStroke();
+            p.textSize(h.size);
+            p.text("❤️", h.x, h.y);
+            if (h.alpha <= 0) hearts.splice(i, 1);
+          }
+        };
+
+        p.windowResized = () => {
+          p.resizeCanvas(window.innerWidth, window.innerHeight);
+        };
+      });
+
+      function spawnHeart() {
+        const x = window.innerWidth * (0.3 + Math.random() * 0.4);
+        hearts.push({
+          x,
+          y: window.innerHeight - 120,
+          t: Math.random() * Math.PI * 2,
+          alpha: 255,
+          speed: 2.5 + Math.random() * 1.5,
+          size: 28 + Math.random() * 20,
+        });
+      }
+    </script>
+  </body>
+</html>

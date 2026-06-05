@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mr. Fukuyama — Talent Monitor</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        background: #050805;
+        color: #9cff9c;
+        font-family: "Courier New", monospace;
+        padding: clamp(20px, 4vw, 48px);
+        max-width: 700px;
+        margin: auto;
+      }
+      h1 { text-transform: uppercase; font-size: clamp(20px, 3vw, 32px); margin: 0 0 6px; }
+      p { font-size: 15px; opacity: 0.6; margin: 0 0 36px; }
+
+      canvas {
+        position: fixed;
+        top: 0; left: 0;
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      #status-label { font-size: 12px; color: #4a8a4a; text-transform: uppercase; letter-spacing: 1px; }
+
+      #current-act {
+        font-size: 28px;
+        font-weight: bold;
+        margin-top: 6px;
+        min-height: 40px;
+      }
+
+      #scoring-indicator {
+        margin-top: 12px;
+        font-size: 14px;
+        color: #4a8a4a;
+      }
+      #scoring-indicator.active { color: #9cfff9; }
+
+      #live-score {
+        margin-top: 20px;
+        font-size: 56px;
+        font-weight: bold;
+        color: #ff9cfc;
+        min-height: 70px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Talent Monitor</h1>
+    <p>Controlled by Firebase. Scoreboard at <strong>/scoreboard</strong>.</p>
+
+    <div id="status-label">Now scoring</div>
+    <div id="current-act">—</div>
+    <div id="scoring-indicator">● waiting</div>
+    <div id="live-score"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <script>
+      const ACTS = [
+        { id: 1, title: "Flaming-o Laser Show",                               performer: "Jenna"  },
+        { id: 2, title: "Resolving Workplace Conflict with Mixed Martial Arts", performer: "Aubri"  },
+        { id: 3, title: "Chairholder Cha Cha",                                performer: "Jo"     },
+        { id: 4, title: "Strategic Asset Reallocation",                        performer: "Sarah"  },
+        { id: 5, title: "This Shit Is Bananas",                                performer: ""       },
+        { id: 6, title: "DJ Dry Phonics",                                      performer: "Pat"    },
+      ];
+
+      const socket = io();
+      let state = { currentAct: null, scoring: false, scores: {} };
+
+      socket.on("talent-state", (s) => { state = s; render(); });
+      socket.on("score-update", ({ scores }) => {
+        state.scores = scores;
+        const score = state.scores[state.currentAct] || 0;
+        document.getElementById("live-score").textContent = state.scoring ? `${score} ❤️` : "";
+      });
+
+      function render() {
+        const act = ACTS.find((a) => a.id === state.currentAct);
+        document.getElementById("current-act").textContent = act
+          ? `${act.title}${act.performer ? ` — ${act.performer}` : ""}`
+          : "—";
+
+        const ind = document.getElementById("scoring-indicator");
+        ind.textContent = state.scoring ? "● scoring" : "● waiting";
+        ind.className = state.scoring ? "active" : "";
+
+        const score = state.scores[state.currentAct] || 0;
+        document.getElementById("live-score").textContent = state.scoring ? `${score} ❤️` : "";
+      }
+
+      // ── Floating hearts ──
+      const hearts = [];
+      new p5((p) => {
+        p.setup = () => { p.createCanvas(window.innerWidth, window.innerHeight); p.textAlign(p.CENTER, p.CENTER); };
+        p.draw = () => {
+          p.clear();
+          for (let i = hearts.length - 1; i >= 0; i--) {
+            const h = hearts[i];
+            h.y -= h.speed; h.x += Math.sin(h.t) * 1.2; h.t += 0.07; h.alpha -= 2.5;
+            p.textSize(h.size); p.text("❤️", h.x, h.y);
+            if (h.alpha <= 0) hearts.splice(i, 1);
+          }
+        };
+        p.windowResized = () => p.resizeCanvas(window.innerWidth, window.innerHeight);
+      });
+
+      function spawnHeart() {
+        hearts.push({ x: window.innerWidth * (0.2 + Math.random() * 0.6), y: window.innerHeight - 80,
+          t: Math.random() * Math.PI * 2, alpha: 255, speed: 2.5 + Math.random() * 1.5, size: 28 + Math.random() * 20 });
+      }
+
+      socket.on("heart", spawnHeart);
+    </script>
+  </body>
+</html>
